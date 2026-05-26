@@ -1,0 +1,60 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat CrewAI + Gemini</title>
+  <link rel="stylesheet" href="{% static 'chat/style.css' %}">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <h1>Chat CrewAI + Gemini</h1>
+        <p>Contexto enviado: SKILL.md, memoria.md e conversa.json</p>
+      </div>
+      <span class="model">{{ model_name }}</span>
+    </header>
+
+    <section class="chat">
+      {% if conversation %}
+        {% for item in conversation %}
+          <article class="turn">
+            <div class="bubble user">
+              <strong>Humano</strong>
+              <p>{{ item.pergunta|linebreaksbr }}</p>
+            </div>
+            <div class="bubble assistant {% if item.status == 'erro' %}error{% endif %}">
+              <strong>Modelo</strong>
+              <p>{{ item.resposta|linebreaksbr }}</p>
+            </div>
+          </article>
+        {% endfor %}
+      {% else %}
+        <div class="empty">
+          Envie uma pergunta para testar o uso de SKILL.md, memoria.md e conversa.json.
+        </div>
+      {% endif %}
+    </section>
+
+    <form class="composer" method="post">
+      {% csrf_token %}
+      <textarea
+        name="message"
+        rows="4"
+        placeholder="Digite uma pergunta para o assistente..."
+        required
+      ></textarea>
+      <div class="actions">
+        <button type="submit">Enviar</button>
+      </div>
+    </form>
+
+    <form class="clear-form" method="post" action="{% url 'clear_history' %}">
+      {% csrf_token %}
+      <button class="secondary" type="submit">Limpar conversa.json</button>
+    </form>
+  </main>
+</body>
+</html>
