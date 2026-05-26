@@ -1,0 +1,1 @@
+# 2026-1-IA-Projeto-Django-API-Gemini
