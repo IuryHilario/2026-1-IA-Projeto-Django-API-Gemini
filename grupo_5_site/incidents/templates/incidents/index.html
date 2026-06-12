@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOC — Detecção de Anomalias</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #30363d;
+      --accent:   #58a6ff;
+      --accent-d: #1f6feb;
+      --text:     #c9d1d9;
+      --dim:      #8b949e;
+      --red:      #f85149;
+      --green:    #3fb950;
+      --orange:   #d29922;
+      --purple:   #a371f7;
+      --r:        8px;
+      --sw:       220px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* layout */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* sidebar */
+    .sidebar {
+      width: var(--sw);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+    }
+    .sidebar-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 16px; font-weight: 700;
+    }
+    .logo-icon { font-size: 22px; }
+    .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); padding: 0 8px 8px; }
+    .nav-item { display: block; padding: 8px 12px; border-radius: var(--r); color: var(--dim); text-decoration: none; }
+    .nav-item.active, .nav-item:hover { background: rgba(88,166,255,.1); color: var(--accent); }
+    .sidebar-footer { padding: 16px 20px 0; border-top: 1px solid var(--border); margin-top: auto; }
+    .model-badge { font-size: 11px; color: var(--dim); word-break: break-all; }
+
+    /* main */
+    .main { margin-left: var(--sw); flex: 1; padding: 32px 40px; max-width: 900px; }
+
+    /* page header */
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+    .page-header h1 { font-size: 20px; font-weight: 700; color: #fff; }
+    .subtitle { color: var(--dim); margin-top: 4px; font-size: 13px; }
+
+    /* buttons */
+    .btn { padding: 7px 16px; border-radius: var(--r); font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; white-space: nowrap; }
+    .btn-primary { background: var(--accent-d); color: #fff; border-color: var(--accent-d); }
+    .btn-primary:hover { background: var(--accent); }
+    .btn-secondary { background: transparent; color: var(--dim); border-color: var(--border); }
+    .btn-secondary:hover { color: var(--text); border-color: var(--dim); }
+    .btn-ghost { background: transparent; color: var(--red); border-color: var(--border); font-size: 12px; padding: 5px 12px; }
+    .btn-ghost:hover { border-color: var(--red); }
+
+    /* examples */
+    .examples { margin-bottom: 24px; }
+    .examples-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); margin-bottom: 8px; display: block; }
+    .examples-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .example-chip {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+      padding: 5px 14px; font-size: 12px; color: var(--dim); cursor: pointer;
+      max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .example-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* form */
+    .event-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; margin-bottom: 36px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+    .event-form textarea {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r);
+      color: var(--text); font-size: 13px; font-family: inherit; padding: 12px; resize: vertical; line-height: 1.6;
+    }
+    .event-form textarea:focus { outline: none; border-color: var(--accent); }
+    .form-actions { display: flex; gap: 10px; margin-top: 12px; }
+
+    /* history header */
+    .history h2 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+    /* card container */
+    .analysis-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .card-error { border-color: var(--red); }
+
+    /* card meta bar */
+    .card-meta {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px;
+      background: rgba(255,255,255,.025);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .card-id { font-weight: 700; color: var(--accent); }
+    .card-ts { color: var(--dim); flex: 1; }
+
+    /* badges */
+    .badge { padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .badge-ok    { background: rgba(63,185,80,.15);  color: var(--green); }
+    .badge-error { background: rgba(248,81,73,.15);  color: var(--red);   }
+    .badge-critica { background: rgba(248,81,73,.2);  color: var(--red);    }
+    .badge-alta    { background: rgba(210,153,34,.2); color: var(--orange); }
+    .badge-media   { background: rgba(210,153,34,.15);color: #e3b341;       }
+    .badge-baixa   { background: rgba(63,185,80,.15); color: var(--green);  }
+
+    /* evento reportado */
+    .card-event {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.01);
+    }
+    .ev-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); display: block; margin-bottom: 4px; }
+    .card-event p { font-size: 13px; color: var(--text); line-height: 1.6; }
+
+    /* severidade banner */
+    .sev-banner { display: grid; grid-template-columns: auto 1fr; border-bottom: 1px solid var(--border); }
+    .sev-block { padding: 14px 20px; border-right: 1px solid var(--border); }
+    .sev-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); display: block; margin-bottom: 4px; }
+    .sev-val { font-size: 22px; font-weight: 800; line-height: 1.1; display: block; }
+    .class-block { padding: 14px 20px; display: flex; flex-direction: column; justify-content: center; }
+    .class-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); display: block; margin-bottom: 4px; }
+    .class-val { font-size: 14px; font-weight: 600; color: var(--text); }
+
+    /* cores de severidade */
+    .c-critica { color: var(--red); }
+    .c-alta    { color: var(--orange); }
+    .c-media   { color: #d29922; }
+    .c-baixa   { color: var(--green); }
+
+    /* linhas de análise */
+    .analysis-rows { display: flex; flex-direction: column; }
+    .arow { padding: 12px 18px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; }
+    .arow:last-child { border-bottom: none; }
+    .arow-resumo   { border-left-color: var(--accent); }
+    .arow-fatores  { border-left-color: var(--orange); }
+    .arow-hipotese { border-left-color: var(--purple); }
+    .arow-acoes    { border-left-color: var(--accent); }
+    .arow-fp       { border-left-color: var(--dim); }
+    .arow-decisao  { border-left-color: var(--green); }
+    .arow-restricoes { border-left-color: transparent; opacity: .65; }
+
+    .arow-2col { display: grid; grid-template-columns: 1fr 1fr; padding: 0; border-left: none; border-bottom: 1px solid var(--border); }
+    .arow-2col > .arow { border-bottom: none; }
+    .arow-2col > .arow:first-child { border-right: 1px solid var(--border); }
+
+    .arow-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+    .arow-label .n { background: rgba(255,255,255,.07); border-radius: 3px; padding: 0 5px; font-size: 10px; line-height: 17px; }
+
+    .arow p { font-size: 13px; color: var(--text); line-height: 1.65; margin: 0; }
+    .arow ul, .arow ol { margin: 0; padding-left: 18px; }
+    .arow li { font-size: 13px; color: var(--text); line-height: 1.7; margin: 3px 0; }
+
+    /* empty */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--dim); }
+    .empty-icon { font-size: 40px; display: block; margin-bottom: 12px; }
+
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 20px 16px; }
+      .page-header { flex-direction: column; }
+      .arow-2col { grid-template-columns: 1fr; }
+      .arow-2col > .arow:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="logo-icon">&#128737;</span>
+      <span>SOC Grupo 5</span>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-label">Painel</span>
+      <a href="{% url 'incidents_index' %}" class="nav-item active">Análise de Eventos</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="model-badge">{{ model_name }}</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="page-header">
+      <div>
+        <h1>Detecção de Anomalias e Priorização de Incidentes</h1>
+        <p class="subtitle">Descreva o evento ou log de segurança para análise assistida por IA.</p>
+      </div>
+      <form method="post" action="{% url 'incidents_clear' %}">
+        {% csrf_token %}
+        <button class="btn btn-ghost" type="submit">Limpar histórico</button>
+      </form>
+    </header>
+
+    <section class="examples">
+      <span class="examples-label">Exemplos rápidos</span>
+      <div class="examples-list">
+        <button type="button" class="example-chip" onclick="fillEvent(this)">42 falhas de login às 03h17 seguidas de acesso bem-sucedido em conta sysadmin via IP externo. Endpoint /api/admin/users acessado.</button>
+        <button type="button" class="example-chip" onclick="fillEvent(this)">87 IPs distintos fizeram requisições a /api/auth/login nos últimos 10 minutos, retornando HTTP 429. Nenhum login bem-sucedido.</button>
+        <button type="button" class="example-chip" onclick="fillEvent(this)">Usuário comum teve 2 falhas às 09h45 e acessou normalmente pelo mesmo IP habitual. Nenhum endpoint sensível acessado.</button>
+        <button type="button" class="example-chip" onclick="fillEvent(this)">IP externo nunca visto acessou 15 endpoints diferentes em 3 minutos, incluindo /api/internal/config. Última requisição retornou HTTP 500.</button>
+      </div>
+    </section>
+
+    <form class="event-form" method="post">
+      {% csrf_token %}
+      <label class="form-label" for="ev">Descrição do evento / log:</label>
+      <textarea id="ev" name="event" rows="5"
+        placeholder="Ex.: IP externo realizou 42 tentativas de login às 03h17, todas com falha. Acesso bem-sucedido na conta sysadmin. Endpoint /api/admin/users acessado com resposta 200."
+        required></textarea>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Analisar evento</button>
+        <button class="btn btn-secondary" type="button" onclick="clearInput()">Limpar campo</button>
+      </div>
+    </form>
+
+    <section class="history">
+      <h2>Histórico de Análises</h2>
+
+      {% if history %}
+        {% for item in history reversed %}
+
+          {% with sev=item.analise.severidade|lower|slugify %}
+          <article class="analysis-card {% if item.status == 'erro' %}card-error{% endif %}">
+
+            <!-- META -->
+            <div class="card-meta">
+              <span class="card-id">#{{ item.id }}</span>
+              <span class="card-ts">{{ item.timestamp }}</span>
+              {% if item.analise.severidade %}
+                {% if item.analise.severidade == "crítica" or item.analise.severidade == "critica" %}
+                  <span class="badge badge-critica">{{ item.analise.severidade|upper }}</span>
+                {% elif item.analise.severidade == "alta" %}
+                  <span class="badge badge-alta">ALTA</span>
+                {% elif item.analise.severidade == "média" or item.analise.severidade == "media" %}
+                  <span class="badge badge-media">MÉDIA</span>
+                {% else %}
+                  <span class="badge badge-baixa">BAIXA</span>
+                {% endif %}
+              {% endif %}
+              {% if item.status == 'erro' %}
+                <span class="badge badge-error">Erro</span>
+              {% else %}
+                <span class="badge badge-ok">Concluído</span>
+              {% endif %}
+            </div>
+
+            <!-- EVENTO -->
+            <div class="card-event">
+              <span class="ev-label">Evento reportado</span>
+              <p>{{ item.evento }}</p>
+            </div>
+
+            {% if item.analise.resumo %}
+
+            <!-- SEVERIDADE + CLASSIFICAÇÃO -->
+            <div class="sev-banner">
+              <div class="sev-block">
+                <span class="sev-lbl">2 · Severidade calculada</span>
+                {% if item.analise.severidade == "crítica" or item.analise.severidade == "critica" %}
+                  <span class="sev-val c-critica">{{ item.analise.severidade|capfirst }}</span>
+                {% elif item.analise.severidade == "alta" %}
+                  <span class="sev-val c-alta">Alta</span>
+                {% elif item.analise.severidade == "média" or item.analise.severidade == "media" %}
+                  <span class="sev-val c-media">Média</span>
+                {% else %}
+                  <span class="sev-val c-baixa">Baixa</span>
+                {% endif %}
+              </div>
+              <div class="class-block">
+                <span class="class-lbl">4 · Classificação</span>
+                <span class="class-val">{{ item.analise.classificacao|capfirst }}</span>
+              </div>
+            </div>
+
+            <!-- LINHAS -->
+            <div class="analysis-rows">
+
+              <div class="arow arow-resumo">
+                <div class="arow-label"><span class="n">1</span> Resumo do evento</div>
+                <p>{{ item.analise.resumo }}</p>
+              </div>
+
+              {% if item.analise.fatores %}
+              <div class="arow arow-fatores">
+                <div class="arow-label"><span class="n">3</span> Fatores que influenciaram a severidade</div>
+                <ul>
+                  {% for f in item.analise.fatores %}
+                    <li>{{ f }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              {% endif %}
+
+              <div class="arow arow-hipotese">
+                <div class="arow-label"><span class="n">5</span> Hipótese principal</div>
+                <p>{{ item.analise.hipotese }}</p>
+              </div>
+
+              {% if item.analise.acoes %}
+              <div class="arow arow-acoes">
+                <div class="arow-label"><span class="n">6</span> Ações recomendadas para investigação</div>
+                <ol>
+                  {% for a in item.analise.acoes %}
+                    <li>{{ a }}</li>
+                  {% endfor %}
+                </ol>
+              </div>
+              {% endif %}
+
+              <div class="arow-2col">
+                <div class="arow arow-fp">
+                  <div class="arow-label"><span class="n">7</span> Avaliação de falso positivo</div>
+                  <p>{{ item.analise.falso_positivo }}</p>
+                </div>
+                <div class="arow arow-decisao">
+                  <div class="arow-label"><span class="n">8</span> Decisão sugerida ao analista</div>
+                  <p>{{ item.analise.decisao }}</p>
+                </div>
+              </div>
+
+              <div class="arow arow-restricoes">
+                <div class="arow-label"><span class="n">9</span> Restrições do assistente</div>
+                <p>{{ item.analise.restricoes }}</p>
+              </div>
+
+            </div>
+            {% endif %}
+
+          </article>
+          {% endwith %}
+
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <span class="empty-icon">&#128269;</span>
+          <p>Nenhuma análise realizada ainda. Descreva um evento acima para começar.</p>
+        </div>
+      {% endif %}
+    </section>
+  </main>
+</div>
+
+<script>
+  function fillEvent(btn) {
+    document.getElementById('ev').value = btn.textContent.trim();
+    document.getElementById('ev').focus();
+  }
+  function clearInput() {
+    document.getElementById('ev').value = '';
+    document.getElementById('ev').focus();
+  }
+</script>
+</body>
+</html>

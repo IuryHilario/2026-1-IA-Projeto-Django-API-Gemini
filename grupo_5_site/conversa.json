@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "timestamp": "2026-06-09T23:28:40.735283+00:00",
+    "evento": "87 IPs distintos fizeram requisições a /api/auth/login nos últimos 10 minutos, retornando HTTP 429. Nenhum login bem-sucedido.",
+    "analise": {
+      "resumo": "Pico de requisições de múltiplos IPs distintos para o endpoint de autenticação (/api/auth/login) com retorno massivo de HTTP 429 (Too Many Requests), sem nenhum login bem-sucedido.",
+      "severidade": "alta",
+      "fatores": [
+        "Volume anormal de requisições",
+        "Múltiplos IPs distintos",
+        "Endpoint sensível (/api/auth/login)",
+        "Retorno massivo de HTTP 429"
+      ],
+      "classificacao": "suspeita",
+      "hipotese": "Possível ataque de negação de serviço (DoS) ou tentativa de sobrecarregar o serviço de autenticação, possivelmente como precursor para um ataque de força bruta ou exploração de vulnerabilidade.",
+      "acoes": [
+        "Correlacionar os IPs de origem com outros logs de segurança para identificar padrões ou fontes comuns.",
+        "Verificar se o volume de requisições HTTP 429 está dentro do esperado para o serviço de autenticação.",
+        "Analisar o histórico de comportamento dos IPs envolvidos, se disponíveis.",
+        "Monitorar a continuidade ou escalada deste padrão de tráfego."
+      ],
+      "falso_positivo": "Baixa probabilidade. O retorno massivo de HTTP 429 de múltiplos IPs distintos para um endpoint de autenticação sugere um comportamento anômalo e potencialmente malicioso, em vez de um pico de tráfego legítimo. No entanto, é importante verificar se não há um problema de configuração no rate limiting ou um bug na aplicação que esteja gerando esses códigos de erro de forma indevida.",
+      "decisao": "Recomenda-se investigação para confirmar a natureza do tráfego e descartar um ataque em andamento. Considerar a aplicação de regras de rate limiting mais agressivas ou temporárias se o padrão persistir e for confirmado como malicioso.",
+      "restricoes": "O assistente não executa ações automáticas de bloqueio ou contenção. A análise é baseada nos dados fornecidos e não substitui a investigação humana completa."
+    },
+    "status": "ok"
+  },
+  {
+    "id": 2,
+    "timestamp": "2026-06-09T23:30:07.418967+00:00",
+    "evento": "42 falhas de login às 03h17 seguidas de acesso bem-sucedido em conta sysadmin via IP externo. Endpoint /api/admin/users acessado.",
+    "analise": {
+      "resumo": "Sequência de 42 falhas de login seguidas por um acesso bem-sucedido em uma conta de administrador (sysadmin) a partir de um IP externo, acessando o endpoint sensível /api/admin/users.",
+      "severidade": "crítica",
+      "fatores": [
+        "Muitas falhas seguidas de sucesso",
+        "Usuário com perfil privilegiado (sysadmin)",
+        "Endpoint sensível (/api/admin/users)",
+        "IP externo",
+        "Horário fora do padrão (03h17)"
+      ],
+      "classificacao": "suspeita de incidente confirmado",
+      "hipotese": "Possível ataque de força bruta bem-sucedido ou uso de credenciais comprometidas para obter acesso não autorizado a recursos administrativos.",
+      "acoes": [
+        "Correlacionar o IP externo com outros eventos de segurança e verificar sua reputação.",
+        "Analisar o histórico de comportamento do usuário sysadmin e do IP de origem.",
+        "Verificar se houve alguma alteração de configuração ou acesso a dados sensíveis após o login bem-sucedido.",
+        "Revisar logs de autenticação e acesso para identificar se o padrão de falhas e sucesso se repetiu em outras contas ou endpoints.",
+        "Verificar a configuração de Multi-Factor Authentication (MFA) para a conta sysadmin e se foi utilizada."
+      ],
+      "falso_positivo": "Baixa probabilidade. A combinação de múltiplas falhas de login seguidas de sucesso em uma conta privilegiada, acessando um endpoint administrativo em horário atípico e a partir de um IP externo, é altamente suspeita e incomum para atividades legítimas.",
+      "decisao": "Recomenda-se escalonamento imediato para investigação aprofundada. Considerar a suspensão temporária da conta sysadmin e o bloqueio do IP externo até que a legitimidade do acesso seja confirmada.",
+      "restricoes": "O assistente não executa ações automáticas de contenção, bloqueio ou alteração de permissões. A análise é baseada nos dados fornecidos e requer validação humana."
+    },
+    "status": "ok"
+  }
+]
